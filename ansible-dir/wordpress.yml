@@ -1,0 +1,10 @@
+---
+  - name: instalacao Wordpress
+    hosts: localhost
+    become: yes
+    vars_files: "vars.yml"
+
+    roles:
+      - wordpress
+
+

@@ -1,0 +1,8 @@
+mysql_db_name_var: wordpressbanco
+mysql_db_password_var: bancopass123
+mysql_user_var: bancouser
+mysql_user_password_var: bancouserpass123
+mysql_host: localhost
+memcached_endpoint: localhost
+prometheus_endpoint: localhost
+nodeexporter_endpoint: localhost

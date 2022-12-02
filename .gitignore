@@ -1,0 +1,5 @@
+*.zip
+docker-depends/
+terraform-dir/.terraform
+terraform-dir/.terraform.lock.hcl
+terraform.tfstate.backup
