@@ -21,7 +21,7 @@ resource "aws_security_group" "allow_ssh" {
   description = "allow_ssh traffic"
   vpc_id      = var.vpc_id
 
-ingress  {
+  ingress  {
     description = "MYSQL"
     from_port   = 3306
     to_port     = 3306
@@ -29,7 +29,7 @@ ingress  {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-ingress {
+  ingress {
     description = "ssh"
     from_port   = 22
     to_port     = 22
@@ -110,9 +110,15 @@ resource "aws_instance" "instancia1" {
               sudo su -
               sudo apt update && sudo apt install curl ansible unzip -y 
               sudo apt install docker docker-compose -y
+              sudo apt install -y amazon-efs-utils
+              mkdir /uploads
+              sudo mount -t efs -o tls fs-0bae1d3cc3b9bbb12:/ /uploads
               wget https://terraform-ansiblebucket-desafio-final.s3.amazonaws.com/main.zip
               unzip main.zip
               sudo ansible-playbook ansible-dir/wordpress.yml --extra-vars "mysql_host=${aws_db_instance.banco.address} memcached_endpoint=${aws_elasticache_cluster.memcache.cluster_address}"
+              cd /var/www/html/wordpress/wp-content
+              ln -s /uploads
+              cd ~
               wget https://terraform-ansiblebucket-desafio-final.s3.amazonaws.com/docker-depends.zip
               unzip docker-depends.zip
               cd docker-depends/
@@ -138,9 +144,15 @@ resource "aws_instance" "instancia2" {
               sudo su -
               sudo apt update && sudo apt install curl ansible unzip -y 
               sudo apt install docker docker-compose -y
+              sudo apt install -y amazon-efs-utils
+              mkdir /uploads
+              sudo mount -t efs -o tls fs-0bae1d3cc3b9bbb12:/ /uploads
               wget https://terraform-ansiblebucket-desafio-final.s3.amazonaws.com/main.zip
               unzip main.zip
               sudo ansible-playbook ansible-dir/wordpress.yml --extra-vars "mysql_host=${aws_db_instance.banco.address} memcached_endpoint=${aws_elasticache_cluster.memcache.cluster_address}"
+              cd /var/www/html/wordpress/wp-content
+              ln -s /uploads
+              cd ~
               wget https://terraform-ansiblebucket-desafio-final.s3.amazonaws.com/docker-depends.zip
               unzip docker-depends.zip
               cd docker-depends/
@@ -197,7 +209,7 @@ resource "aws_autoscaling_group" "terraform-autoscale" {
   max_size             = 4
   launch_configuration = aws_launch_configuration.autoscale-config.id
   target_group_arns = [aws_lb_target_group.target-terraform.id]
-  vpc_zone_identifier  = [var.subnet_id_pub_a, var.subnet_id_pub_b]
+  vpc_zone_identifier  = [var.subnet_id_pub_a , var.subnet_id_pub_b]
   health_check_type = "EC2"
   name = "wordpress"
 
@@ -211,7 +223,7 @@ resource "aws_autoscaling_group" "terraform-autoscale" {
 
 resource "aws_launch_configuration" "autoscale-config" {
   image_id        = var.ami_aws_instance
-  instance_type   = "t2.micro"
+  instance_type   = var.type_aws_instance
   security_groups = [aws_security_group.allow_ssh.id]
   key_name        = var.key_aws_instance
 
@@ -221,14 +233,14 @@ resource "aws_launch_configuration" "autoscale-config" {
 resource "aws_lb" "lb" {
   name               = "loadbalancer"
   internal           = false
-  load_balancer_type = "network"
+  load_balancer_type = "application"
   security_groups    = [aws_security_group.allow_ssh.id]
   subnets            = [var.subnet_id_pub_a, var.subnet_id_pub_b]
 
   enable_deletion_protection = false
 
   tags = {
-    Environment = "network_lb"
+    Environment = "test"
   }
 }
 
@@ -246,10 +258,10 @@ resource "aws_lb_listener" "listener" {
 
 resource "aws_lb_target_group" "target-terraform" {
   name        = "terraform-target-group"
+  vpc_id      = var.vpc_id
+  target_type = "instance"
   port        = 80
   protocol    = "HTTP"
-  target_type = "instance"
-  vpc_id      = var.vpc_id
       health_check {
         protocol = "HTTP"
         path = "/"
